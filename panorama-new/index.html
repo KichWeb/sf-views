@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:fb="http://ogp.me/ns/fb#">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, minimal-ui" />
+	<meta property="og:url" content="" />
+	<meta property="og:site_name" content="" />
+	<meta property="og:title" content="" />
+	<meta property="og:description" content="" />
+	<meta property="og:image" content="" />
+    <link href="style.css" rel="stylesheet" />
+	<script src="js/three.min.js"></script>
+	<script src="js/StereoEffect.js"></script>
+	<script src="js/DeviceOrientationControls.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+</head>
+<body>
+<div id="viewer"></div>
+<div id="viewer-toolbar">
+	<div id="togglemode">
+	    <input id="togglemode-checkbox" name="togglemode-checkbox" type="checkbox" />
+	    <label class="togglemode-label" for="togglemode-checkbox">
+	        <span class="togglemode-icon"></span>
+	    </label>
+	</div>
+	<!--<div id="upload-block">
+		<a class="upload" href="http://viewer.spherecast.org/upload/"></a>
+	</div>
+	<div id="share-block">
+		<a class="share"></a>
+	</div>-->
+	<div id="fullscreen-block">
+		<a class="fullscreen"></a>
+	</div>
+<!--
+	<div id="share">
+		<a class="close"></a>
+
+		<label for="url">URL</label>
+		<input id="share-url" name="share-url" type="text" value="http://sphcst.com/vupz1" readonly="readonly" />
+
+		<label for="embed">Embed</label>
+		<textarea id="share-embed" name="share-embed" readonly="readonly">&lt;iframe src="http://sphcst.com/vupz1/embed" width="640" height="320" frameborder="0" allowfullscreen /&gt;</textarea>
+	</div>
+-->
+</div>
+<script>
+    var camera, scene, renderer;
+    var effect, controls;
+    var element, container;
+    var vrMode = false;
+
+    var clock = new THREE.Clock();
+
+    init();
+    animate();
+
+    function init() {
+        renderer = new THREE.WebGLRenderer();
+        element = renderer.domElement;
+        container = document.getElementById('viewer');
+        container.appendChild(element);
+
+        effect = new THREE.StereoEffect(renderer);
+        effect.separation = -6.2;
+        effect.setSize((window.innerWidth/2), window.innerHeight);
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(90, (window.innerWidth/2) / window.innerHeight, 0.001, 10000);
+        camera.position.set(0, 0, 0);
+        scene.add(camera);
+
+        controls = new THREE.OrbitControls(camera, element);
+//		controls.rotateUp(Math.PI / 4);
+		controls.rotateUp(-Math.PI / 12);
+        controls.target.set(
+			camera.position.x + 0.1,
+			camera.position.y,
+			camera.position.z
+        );
+        controls.noZoom = true;
+        controls.noPan = true;
+
+		window.addEventListener('deviceorientation', setOrientationControls, true);
+
+		var filepath = '/img/apt_01.jpg';
+        var currentSphere = new THREE.Mesh(
+                new THREE.SphereGeometry(100, 32, 32),
+                new THREE.MeshBasicMaterial({
+                    map: THREE.ImageUtils.loadTexture(filepath)
+                })
+        );
+        currentSphere.scale.x = -1;
+        scene.add(currentSphere);
+
+        window.addEventListener('resize', resize, false);
+        setTimeout(resize, 1);
+    }
+
+	function setOrientationControls(e) {
+	    if (!e.alpha)
+	    {
+	        return;
+	    }
+
+		vrMode = true;
+		$('#togglemode-checkbox:checkbox').attr('checked', true);
+		
+
+	    controls = new THREE.DeviceOrientationControls(camera, true);
+	    controls.connect();
+	    controls.update();
+
+		// Full screen requires clicking the icon.
+//		element.addEventListener('click', fullscreen, false);
+
+		window.removeEventListener('deviceorientation', setOrientationControls, true);
+	}
+
+	function startProject()
+	{
+	}
+
+    function resize() {
+        var width = container.offsetWidth;
+        var height = container.offsetHeight;
+
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(width, height);
+        effect.setSize(width, height);
+    }
+
+    function update(dt) {
+        resize();
+
+        camera.updateProjectionMatrix();
+
+        controls.update(dt);
+    }
+
+	function render(dt)
+	{
+		if (vrMode == true)
+    	{
+			effect.render(scene, camera);
+		}
+		else
+		{
+			renderer.render(scene, camera);
+		}
+	}
+
+    function animate(t) {
+        requestAnimationFrame(animate);
+
+        update(clock.getDelta());
+        render(clock.getDelta());
+    }
+
+    function isFullScreen() {
+        var fsElem =
+                document.fullscreenElement ||
+                document.msFullscreenElement ||
+                document.mozFullscreenElement ||
+                document.webkitFullscreenElement;
+
+        return ((fsElem != null) && (fsElem != undefined));
+    }
+
+    function fullscreen() {
+        if (container.requestFullscreen) {
+            container.requestFullscreen();
+        } else if (container.msRequestFullscreen) {
+            container.msRequestFullscreen();
+        } else if (container.mozRequestFullScreen) {
+            container.mozRequestFullScreen();
+        } else if (container.webkitRequestFullscreen) {
+            container.webkitRequestFullscreen();
+        }
+    }
+
+$(document).ready(function()
+{
+	$('#togglemode-checkbox:checkbox').change(function()
+	{
+		if ($(this).is(':checked'))
+		{
+			vrMode = true;
+		}
+		else
+		{
+			vrMode = false;
+		}
+	});
+
+	$('#fullscreen-block a.fullscreen').on('click', function()
+	{
+		fullscreen();
+	});
+
+	$('#share-block a.share').on('click', function()
+	{
+		$('#share').show();
+	});
+
+	$('#share a.close').on('click', function()
+	{
+		$('#share').hide();
+	});
+
+	$('#share-url, #share-embed').on('focus', function()
+	{
+		$(this).select();
+	});
+});
+</script>
+
+</body>
+</html>
